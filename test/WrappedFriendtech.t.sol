@@ -2,6 +2,6 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
-import "src/FriendWrapper.sol";
+import "src/WrappedFriendtech.sol";
 
-contract FriendWrapperTest is Test {}
+contract WrappedFriendtechTest is Test {}

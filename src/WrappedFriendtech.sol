@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
+import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-interface IFriendtechSharesV1 {
+interface IFriendtech {
     function getBuyPriceAfterFee(
         address sharesSubject,
         uint256 amount
@@ -21,18 +22,46 @@ interface IFriendtechSharesV1 {
     function sellShares(address sharesSubject, uint256 amount) external;
 }
 
-contract FriendWrapper is ERC1155 {
+contract WrappedFriendtech is Ownable, ERC1155 {
     using LibString for uint256;
     using SafeTransferLib for address;
 
-    IFriendtechSharesV1 public constant FRIENDTECH =
-        IFriendtechSharesV1(0xCF205808Ed36593aa40a44F10c7f7C2F67d4A4d4);
-    string public constant BASE_URI = "https://prod-api.kosetto.com/users/";
+    IFriendtech public constant FRIENDTECH =
+        IFriendtech(0xCF205808Ed36593aa40a44F10c7f7C2F67d4A4d4);
+
+    // Can be changed via the setter below (necessary should maintainership change).
+    string public baseURI = "https://prod-api.kosetto.com/users/";
 
     error ZeroAmount();
 
-    function uri(uint256 id) public pure override returns (string memory) {
-        return string.concat(BASE_URI, id.toString());
+    constructor(address initialOwner) {
+        _initializeOwner(initialOwner);
+    }
+
+    // Overridden to enforce 2-step ownership transfers.
+    function transferOwnership(address) public payable override {}
+
+    // Overridden to enforce 2-step ownership transfers.
+    function renounceOwnership() public payable override {}
+
+    /**
+     * @notice Set a new value for `baseURI`.
+     * @param  newBaseURI  string  New base URI.
+     */
+    function setBaseURI(string calldata newBaseURI) external onlyOwner {
+        baseURI = newBaseURI;
+
+        // We're maintaining one baseURI for all token IDs.
+        emit URI(newBaseURI, type(uint256).max);
+    }
+
+    /**
+     * @notice A distinct Uniform Resource Identifier (URI) for a given token.
+     * @param  id   uint256  Token ID.
+     * @return URI  string   A JSON file that conforms to the "ERC-1155 Metadata URI JSON Schema".
+     */
+    function uri(uint256 id) public view override returns (string memory) {
+        return string.concat(baseURI, id.toString());
     }
 
     /**
