@@ -2,11 +2,14 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Script.sol";
+import {WrappedFriendtech} from "src/WrappedFriendtech.sol";
 
-contract FriendWrapperScript is Script {
+contract WrappedFriendtechScript is Script {
     function setUp() public {}
 
     function run() public {
-        vm.broadcast();
+        vm.broadcast(vm.envUint("PRIVATE_KEY"));
+
+        new WrappedFriendtech(vm.envAddress("OWNER"));
     }
 }
