@@ -136,6 +136,15 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
         wrapper.wrap(address(0), 1);
     }
 
+    function testCannotWrapInsufficientMsgValue() external {
+        uint256 amount = 1;
+        uint256 price = FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount);
+
+        vm.expectRevert();
+
+        wrapper.wrap{value: price - 1}(SHARES_SUBJECT, amount);
+    }
+
     function testWrap() external {
         uint256 amount = 1;
         uint256 price = FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount);
