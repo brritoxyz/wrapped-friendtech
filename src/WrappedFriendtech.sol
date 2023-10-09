@@ -26,6 +26,7 @@ contract WrappedFriendtech is Ownable, ERC1155 {
     using LibString for uint256;
     using SafeTransferLib for address;
 
+    uint256 private constant _ADDR_BYTE_LENGTH = 20;
     IFriendtech public constant FRIENDTECH =
         IFriendtech(0xCF205808Ed36593aa40a44F10c7f7C2F67d4A4d4);
 
@@ -35,9 +36,7 @@ contract WrappedFriendtech is Ownable, ERC1155 {
     error ZeroAmount();
 
     // For receiving ETH from share sales.
-    receive() external payable {
-        if (msg.sender != address(FRIENDTECH)) revert();
-    }
+    receive() external payable {}
 
     constructor(address initialOwner) {
         _initializeOwner(initialOwner);
@@ -66,7 +65,7 @@ contract WrappedFriendtech is Ownable, ERC1155 {
      * @return URI  string   A JSON file that conforms to the "ERC-1155 Metadata URI JSON Schema".
      */
     function uri(uint256 id) public view override returns (string memory) {
-        return string.concat(baseURI, id.toString());
+        return string.concat(baseURI, id.toHexString(_ADDR_BYTE_LENGTH));
     }
 
     /**

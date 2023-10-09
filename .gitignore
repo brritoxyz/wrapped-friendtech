@@ -12,3 +12,4 @@ optimized-out/
 .env
 
 scripts/loadEnv.sh
+broadcast/
