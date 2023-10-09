@@ -34,6 +34,11 @@ contract WrappedFriendtech is Ownable, ERC1155 {
 
     error ZeroAmount();
 
+    // For receiving ETH from share sales.
+    receive() external payable {
+        if (msg.sender != address(FRIENDTECH)) revert();
+    }
+
     constructor(address initialOwner) {
         _initializeOwner(initialOwner);
     }
@@ -86,7 +91,7 @@ contract WrappedFriendtech is Ownable, ERC1155 {
         if (msg.value > price) {
             // Will not underflow since `msg.value` is greater than `price`.
             unchecked {
-                msg.sender.safeTransferETH(msg.value - price);
+                msg.sender.forceSafeTransferETH(msg.value - price);
             }
         }
     }
@@ -107,6 +112,6 @@ contract WrappedFriendtech is Ownable, ERC1155 {
         FRIENDTECH.sellShares(sharesSubject, amount);
 
         // Transfer the contract's ETH balance since it should only have ETH from the share sale.
-        msg.sender.safeTransferETH(address(this).balance);
+        msg.sender.forceSafeTransferETH(address(this).balance);
     }
 }

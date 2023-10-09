@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
+import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {WrappedFriendtech} from "src/WrappedFriendtech.sol";
 
 interface IFriendtech {
@@ -123,16 +124,16 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
                              wrap
     //////////////////////////////////////////////////////////////*/
 
-    function testCannotWrapZeroSharesSubject() external {
-        vm.expectRevert("Only the shares' subject can buy the first share");
-
-        wrapper.wrap(address(0), 1);
-    }
-
     function testCannotWrapZeroAmount() external {
         vm.expectRevert(WrappedFriendtech.ZeroAmount.selector);
 
         wrapper.wrap(SHARES_SUBJECT, 0);
+    }
+
+    function testCannotWrapZeroSharesSubject() external {
+        vm.expectRevert("Only the shares' subject can buy the first share");
+
+        wrapper.wrap(address(0), 1);
     }
 
     function testWrap() external {
@@ -240,5 +241,119 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
         if (sendExtraETH)
             // Balance should only reflect the price being deducted since any extra was returned.
             assertEq(ethBalanceBefore - price, address(this).balance);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             unwrap
+    //////////////////////////////////////////////////////////////*/
+
+    function testCannotUnwrapZeroAmount() external {
+        vm.expectRevert(WrappedFriendtech.ZeroAmount.selector);
+
+        wrapper.unwrap(SHARES_SUBJECT, 0);
+    }
+
+    function testCannotUnwrapZeroSharesSubject() external {
+        vm.expectRevert(ERC1155.InsufficientBalance.selector);
+
+        wrapper.unwrap(address(0), 1);
+    }
+
+    function testUnwrap() external {
+        uint256 amount = 1;
+
+        wrapper.wrap{
+            value: FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount)
+        }(SHARES_SUBJECT, amount);
+
+        uint256 tokenBalanceBefore = wrapper.balanceOf(
+            address(this),
+            SHARES_SUBJECT_TOKEN_ID
+        );
+        uint256 wrapperSharesBalanceBefore = FRIENDTECH.sharesBalance(
+            SHARES_SUBJECT,
+            address(wrapper)
+        );
+        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
+        uint256 ethBalanceBefore = address(this).balance;
+        uint256 sellPrice = FRIENDTECH.getSellPriceAfterFee(
+            SHARES_SUBJECT,
+            amount
+        );
+
+        vm.expectEmit(true, true, true, true, address(wrapper));
+
+        emit TransferSingle(
+            address(this),
+            address(this),
+            address(0),
+            SHARES_SUBJECT_TOKEN_ID,
+            amount
+        );
+
+        wrapper.unwrap(SHARES_SUBJECT, amount);
+
+        assertEq(
+            tokenBalanceBefore - amount,
+            wrapper.balanceOf(address(this), SHARES_SUBJECT_TOKEN_ID)
+        );
+        assertEq(
+            wrapperSharesBalanceBefore - amount,
+            FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
+        );
+        assertEq(
+            supplyBefore - amount,
+            FRIENDTECH.sharesSupply(SHARES_SUBJECT)
+        );
+        assertEq(ethBalanceBefore + sellPrice, address(this).balance);
+    }
+
+    function testUnwrapFuzz(uint8 amount) external {
+        vm.assume(amount != 0);
+
+        wrapper.wrap{
+            value: FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount)
+        }(SHARES_SUBJECT, amount);
+
+        uint256 tokenBalanceBefore = wrapper.balanceOf(
+            address(this),
+            SHARES_SUBJECT_TOKEN_ID
+        );
+        uint256 wrapperSharesBalanceBefore = FRIENDTECH.sharesBalance(
+            SHARES_SUBJECT,
+            address(wrapper)
+        );
+        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
+        uint256 ethBalanceBefore = address(this).balance;
+        uint256 sellPrice = FRIENDTECH.getSellPriceAfterFee(
+            SHARES_SUBJECT,
+            amount
+        );
+
+        vm.expectEmit(true, true, true, true, address(wrapper));
+
+        emit TransferSingle(
+            address(this),
+            address(this),
+            address(0),
+            SHARES_SUBJECT_TOKEN_ID,
+            amount
+        );
+
+        wrapper.unwrap(SHARES_SUBJECT, amount);
+
+        assertEq(
+            tokenBalanceBefore - amount,
+            wrapper.balanceOf(address(this), SHARES_SUBJECT_TOKEN_ID)
+        );
+        assertEq(
+            wrapperSharesBalanceBefore - amount,
+            FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
+        );
+        assertEq(
+            supplyBefore - amount,
+            FRIENDTECH.sharesSupply(SHARES_SUBJECT)
+        );
+        assertEq(ethBalanceBefore + sellPrice, address(this).balance);
     }
 }
