@@ -127,13 +127,13 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
     function testCannotWrapZeroAmount() external {
         vm.expectRevert(WrappedFriendtech.ZeroAmount.selector);
 
-        wrapper.wrap(SHARES_SUBJECT, 0);
+        wrapper.wrap(SHARES_SUBJECT, 0, "");
     }
 
     function testCannotWrapZeroSharesSubject() external {
         vm.expectRevert("Only the shares' subject can buy the first share");
 
-        wrapper.wrap(address(0), 1);
+        wrapper.wrap(address(0), 1, "");
     }
 
     function testCannotWrapInsufficientMsgValue() external {
@@ -142,7 +142,7 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
 
         vm.expectRevert();
 
-        wrapper.wrap{value: price - 1}(SHARES_SUBJECT, amount);
+        wrapper.wrap{value: price - 1}(SHARES_SUBJECT, amount, "");
     }
 
     function testWrap() external {
@@ -157,16 +157,9 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             SHARES_SUBJECT,
             address(wrapper)
         );
-        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
-
-        vm.expectEmit(true, true, true, true, address(wrapper));
-
-        emit TransferSingle(
-            address(this),
-            address(0),
-            address(this),
-            SHARES_SUBJECT_TOKEN_ID,
-            amount
+        uint256 wrapperSupplyBefore = wrapper.totalSupply(SHARES_SUBJECT);
+        uint256 friendtechSupplyBefore = FRIENDTECH.sharesSupply(
+            SHARES_SUBJECT
         );
 
         vm.expectEmit(false, false, false, true, address(FRIENDTECH));
@@ -179,10 +172,20 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             priceBeforeFee,
             (priceBeforeFee * friendtechProtocolFeePercent) / 1 ether,
             (priceBeforeFee * friendtechSubjectFeePercent) / 1 ether,
-            supplyBefore + amount
+            friendtechSupplyBefore + amount
         );
 
-        wrapper.wrap{value: price}(SHARES_SUBJECT, amount);
+        vm.expectEmit(true, true, true, true, address(wrapper));
+
+        emit TransferSingle(
+            address(this),
+            address(0),
+            address(this),
+            SHARES_SUBJECT_TOKEN_ID,
+            amount
+        );
+
+        wrapper.wrap{value: price}(SHARES_SUBJECT, amount, "");
 
         assertEq(
             tokenBalanceBefore + amount,
@@ -193,7 +196,11 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
         );
         assertEq(
-            supplyBefore + amount,
+            wrapperSupplyBefore + amount,
+            wrapper.totalSupply(SHARES_SUBJECT)
+        );
+        assertEq(
+            friendtechSupplyBefore + amount,
             FRIENDTECH.sharesSupply(SHARES_SUBJECT)
         );
     }
@@ -215,7 +222,10 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             SHARES_SUBJECT,
             address(wrapper)
         );
-        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
+        uint256 wrapperSupplyBefore = wrapper.totalSupply(SHARES_SUBJECT);
+        uint256 friendtechSupplyBefore = FRIENDTECH.sharesSupply(
+            SHARES_SUBJECT
+        );
         uint256 ethBalanceBefore = address(this).balance;
 
         vm.expectEmit(true, true, true, true, address(wrapper));
@@ -232,7 +242,7 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             value: sendExtraETH
                 ? price + (uint256(extraETHMultiplier) * 1 ether)
                 : price
-        }(SHARES_SUBJECT, amount);
+        }(SHARES_SUBJECT, amount, "");
 
         assertEq(
             tokenBalanceBefore + amount,
@@ -243,7 +253,11 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
         );
         assertEq(
-            supplyBefore + amount,
+            wrapperSupplyBefore + amount,
+            wrapper.totalSupply(SHARES_SUBJECT)
+        );
+        assertEq(
+            friendtechSupplyBefore + amount,
             FRIENDTECH.sharesSupply(SHARES_SUBJECT)
         );
 
@@ -273,7 +287,7 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
 
         wrapper.wrap{
             value: FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount)
-        }(SHARES_SUBJECT, amount);
+        }(SHARES_SUBJECT, amount, "");
 
         uint256 tokenBalanceBefore = wrapper.balanceOf(
             address(this),
@@ -283,7 +297,10 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             SHARES_SUBJECT,
             address(wrapper)
         );
-        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
+        uint256 wrapperSupplyBefore = wrapper.totalSupply(SHARES_SUBJECT);
+        uint256 friendtechSupplyBefore = FRIENDTECH.sharesSupply(
+            SHARES_SUBJECT
+        );
         uint256 ethBalanceBefore = address(this).balance;
         uint256 sellPrice = FRIENDTECH.getSellPriceAfterFee(
             SHARES_SUBJECT,
@@ -311,7 +328,11 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
         );
         assertEq(
-            supplyBefore - amount,
+            wrapperSupplyBefore - amount,
+            wrapper.totalSupply(SHARES_SUBJECT)
+        );
+        assertEq(
+            friendtechSupplyBefore - amount,
             FRIENDTECH.sharesSupply(SHARES_SUBJECT)
         );
         assertEq(ethBalanceBefore + sellPrice, address(this).balance);
@@ -322,7 +343,7 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
 
         wrapper.wrap{
             value: FRIENDTECH.getBuyPriceAfterFee(SHARES_SUBJECT, amount)
-        }(SHARES_SUBJECT, amount);
+        }(SHARES_SUBJECT, amount, "");
 
         uint256 tokenBalanceBefore = wrapper.balanceOf(
             address(this),
@@ -332,7 +353,10 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             SHARES_SUBJECT,
             address(wrapper)
         );
-        uint256 supplyBefore = FRIENDTECH.sharesSupply(SHARES_SUBJECT);
+        uint256 wrapperSupplyBefore = wrapper.totalSupply(SHARES_SUBJECT);
+        uint256 friendtechSupplyBefore = FRIENDTECH.sharesSupply(
+            SHARES_SUBJECT
+        );
         uint256 ethBalanceBefore = address(this).balance;
         uint256 sellPrice = FRIENDTECH.getSellPriceAfterFee(
             SHARES_SUBJECT,
@@ -360,7 +384,11 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
             FRIENDTECH.sharesBalance(SHARES_SUBJECT, address(wrapper))
         );
         assertEq(
-            supplyBefore - amount,
+            wrapperSupplyBefore - amount,
+            wrapper.totalSupply(SHARES_SUBJECT)
+        );
+        assertEq(
+            friendtechSupplyBefore - amount,
             FRIENDTECH.sharesSupply(SHARES_SUBJECT)
         );
         assertEq(ethBalanceBefore + sellPrice, address(this).balance);

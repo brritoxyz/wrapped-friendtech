@@ -33,6 +33,9 @@ contract WrappedFriendtech is Ownable, ERC1155 {
     // Can be changed via the setter below (necessary should maintainership change).
     string public baseURI = "https://prod-api.kosetto.com/users/";
 
+    // Tracks the wrapped token supply for each FT account.
+    mapping(address sharesSubject => uint256 supply) public totalSupply;
+
     error ZeroAmount();
 
     // For receiving ETH from share sales.
@@ -74,18 +77,29 @@ contract WrappedFriendtech is Ownable, ERC1155 {
      * @dev    Emits the `TransferSingle` event as a result of calling `_mint`.
      * @param  sharesSubject  address  Friendtech user address.
      * @param  amount         uint256  Shares amount.
+     * @param  data           bytes    Arbitrary data to send in call to `onERC1155Received` on `msg.sender`.
      */
-    function wrap(address sharesSubject, uint256 amount) external payable {
+    function wrap(
+        address sharesSubject,
+        uint256 amount,
+        bytes calldata data
+    ) external payable {
         if (amount == 0) revert ZeroAmount();
 
-        // The token ID is the uint256-casted `sharesSubject` address.
-        _mint(msg.sender, uint256(uint160(sharesSubject)), amount, "");
+        // Can overflow but the tx will revert since there isn't enough ETH to purchase that many FT shares.
+        unchecked {
+            totalSupply[sharesSubject] += amount;
+        }
 
         uint256 price = FRIENDTECH.getBuyPriceAfterFee(sharesSubject, amount);
 
         // Throws if `sharesSubject` is the zero address ("Only the shares' subject can buy the first share").
         // Throws if `msg.value` is insufficient since this contract will not (intentionally) maintain an ETH balance.
         FRIENDTECH.buyShares{value: price}(sharesSubject, amount);
+
+        // Calls `onERC1155Received` on `msg.sender` if they're a contract account.
+        // Trustworthiness of FT > `msg.sender` which is why we have this here.
+        _mint(msg.sender, uint256(uint160(sharesSubject)), amount, data);
 
         if (msg.value > price) {
             // Will not underflow since `msg.value` is greater than `price`.
@@ -106,6 +120,11 @@ contract WrappedFriendtech is Ownable, ERC1155 {
         if (amount == 0) revert ZeroAmount();
 
         _burn(msg.sender, uint256(uint160(sharesSubject)), amount);
+
+        // Will not underflow if `_burn` did not throw.
+        unchecked {
+            totalSupply[sharesSubject] -= amount;
+        }
 
         // Throws if `sharesSubject` is the zero address.
         FRIENDTECH.sellShares(sharesSubject, amount);
