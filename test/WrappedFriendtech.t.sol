@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import "forge-std/Test.sol";
+import {LibString} from "solady/utils/LibString.sol";
 import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {WrappedFriendtech} from "src/WrappedFriendtech.sol";
@@ -53,6 +54,9 @@ contract ERC1155TokenReceiver {
 }
 
 contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
+    using LibString for uint256;
+
+    uint256 private constant _ADDR_BYTE_LENGTH = 20;
     IFriendtech public constant FRIENDTECH =
         IFriendtech(0xCF205808Ed36593aa40a44F10c7f7C2F67d4A4d4);
     address public constant SHARES_SUBJECT =
@@ -117,6 +121,29 @@ contract WrappedFriendtechTest is Test, ERC1155TokenReceiver {
         assertEq(
             keccak256(bytes(newBaseURI)),
             keccak256(bytes(wrapper.baseURI()))
+        );
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                             uri
+    //////////////////////////////////////////////////////////////*/
+
+    function testURI() external {
+        uint256 id = 0;
+        string memory hexStringID = id.toHexString(_ADDR_BYTE_LENGTH);
+
+        assertEq(
+            string.concat(wrapper.baseURI(), hexStringID),
+            wrapper.uri(id)
+        );
+
+        string memory newBaseURI = "https://test.com";
+
+        wrapper.setBaseURI(newBaseURI);
+
+        assertEq(
+            string.concat(wrapper.baseURI(), hexStringID),
+            wrapper.uri(id)
         );
     }
 
