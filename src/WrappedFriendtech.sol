@@ -5,32 +5,25 @@ import {Ownable} from "solady/auth/Ownable.sol";
 import {ERC1155} from "solady/tokens/ERC1155.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IFriendtech} from "src/interfaces/IFriendtech.sol";
 
-interface IFriendtech {
-    function getBuyPriceAfterFee(
-        address sharesSubject,
-        uint256 amount
-    ) external view returns (uint256);
-
-    function getSellPriceAfterFee(
-        address sharesSubject,
-        uint256 amount
-    ) external view returns (uint256);
-
-    function buyShares(address sharesSubject, uint256 amount) external payable;
-
-    function sellShares(address sharesSubject, uint256 amount) external;
-}
-
+/**
+ * @title Friendtech share wrapper contract.
+ * @author J.Page | kp (ppmoon69.eth)
+ * @notice Wrap your Friendtech shares to enable their usage in other apps.
+ */
 contract WrappedFriendtech is Ownable, ERC1155 {
     using LibString for uint256;
     using SafeTransferLib for address;
 
+    // Used when converting token IDs to hex strings in `uri`.
     uint256 private constant _ADDR_BYTE_LENGTH = 20;
+
+    // Official Friendtech contract: https://basescan.org/address/0xcf205808ed36593aa40a44f10c7f7c2f67d4a4d4.
     IFriendtech public constant FRIENDTECH =
         IFriendtech(0xCF205808Ed36593aa40a44F10c7f7C2F67d4A4d4);
 
-    // Can be changed via the setter below (necessary should maintainership change).
+    // Can be updated via the setter below (necessary should maintainership change).
     string public baseURI = "https://prod-api.kosetto.com/users/";
 
     // Tracks the wrapped token supply for each FT account.
@@ -65,7 +58,7 @@ contract WrappedFriendtech is Ownable, ERC1155 {
     /**
      * @notice A distinct Uniform Resource Identifier (URI) for a given token.
      * @param  id   uint256  Token ID.
-     * @return URI  string   A JSON file that conforms to the "ERC-1155 Metadata URI JSON Schema".
+     * @return      string   A JSON file that conforms to the "ERC-1155 Metadata URI JSON Schema".
      */
     function uri(uint256 id) public view override returns (string memory) {
         return string.concat(baseURI, id.toHexString(_ADDR_BYTE_LENGTH));
